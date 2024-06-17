@@ -1,4 +1,6 @@
 import bpy
+import json
+import os
 
 bl_info = {
     "name": "Print verts",
@@ -6,31 +8,42 @@ bl_info = {
     "version": (1, 1),
     "blender": (2, 80, 0),
     "location": "View3D > Edit Mode > Vertex > Print vertices to console",
-    "description": "Print vertices of the active object to the console",
+    "description": "Print the vertices of the active object to a file and to the console ",
     "category": "Development",
 }
+def float_to_str(num, precision=3):  # Default precision is 3
+    return f"{num:.{precision}f}"
 
 def print_verts():
     obj = bpy.context.active_object
     mesh = obj.data
 
-    print("\033c") # Clear the console
-    print("/033")
+    if not mesh.vertices:
+        print("Error: The active object has no vertices.")
+        return
 
-    print(obj.name + " = [")
+    print("\033c", end="")  # Clear console 
 
-    for i, vertex in enumerate(mesh.vertices):
-        print(f"({vertex.co.x}, {vertex.co.y}, {vertex.co.z})", end="")
-        if i != len(mesh.vertices) - 1:
-            print(",")
-            
-    print('\n]')
+    vertices_data = {
+        obj.name: [
+            {"x": float_to_str(v.co.x), "y": float_to_str(v.co.y), "z": float_to_str(v.co.z)}
+            for v in mesh.vertices
+        ]
+    }
+
+    blend_file_directory = os.path.dirname(bpy.data.filepath)
+    output_file_path = os.path.join(blend_file_directory, f"{obj.name}.json")
+
+    with open(output_file_path, "w") as outfile:
+        json.dump(vertices_data, outfile, default=float_to_str, indent=4)
+
+    print(f"Vertices saved to: {output_file_path}")
+    print(json.dumps(vertices_data, default=float_to_str, indent=4))
     
-
 class PrintVerts(bpy.types.Operator):
-    """Print vertices of the active object to the console"""
+    """Print the vertices of the active object to the console and aa a file in the blend file directory"""
     bl_idname = "development.print_verts"
-    bl_label = "Print vertices of active object to the console"
+    bl_label = "Print vertices of active object to a console and a file"
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
